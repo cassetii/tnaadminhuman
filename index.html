@@ -378,6 +378,7 @@
             <li><a href="#" class="nav-link" onclick="showTab('reports',this)"><i class="bi bi-file-earmark-pdf"></i><span>Reports</span></a></li>
         </ul></nav>
         <nav class="nav-section"><div class="nav-section-title">Management</div><ul class="nav-menu">
+            <li><a href="#" class="nav-link" onclick="showTab('pegawai',this)"><i class="bi bi-people"></i><span>Data Pegawai</span></a></li>
             <li><a href="#" class="nav-link" onclick="showTab('data',this)"><i class="bi bi-database"></i><span>Data Master</span></a></li>
             <li><a href="#" class="nav-link" onclick="showTab('settings',this)"><i class="bi bi-gear"></i><span>Settings</span></a></li>
         </ul></nav>
@@ -442,6 +443,19 @@
             </div>
         </div></div>
         
+        <div class="tab-content" id="tabPegawai"><div class="page-content">
+            <div class="filter-bar"><div class="filter-row">
+                <div class="filter-group" style="flex:2"><label>Cari Pegawai</label><div class="search-wrapper"><i class="bi bi-search"></i><input type="text" class="filter-input" id="searchPegawai" placeholder="Nama, NPP, atau jabatan..." oninput="filterPegawai()"></div></div>
+                <div class="filter-group"><label>Unit Kerja</label><select class="filter-input" id="filterUnit" onchange="filterPegawai()"><option value="">Semua Unit</option></select></div>
+                <div class="filter-group"><label>Status Mapping</label><select class="filter-input" id="filterMapping" onchange="filterPegawai()"><option value="">Semua</option><option value="mapped">Sudah Mapping</option><option value="unmapped">Belum Mapping</option></select></div>
+                <div class="filter-group" style="flex:0"><label>&nbsp;</label><button class="btn btn-ghost" onclick="clearPegawaiFilters()"><i class="bi bi-x-circle"></i></button></div>
+            </div></div>
+            <div class="card"><div class="card-header"><div class="card-title"><i class="bi bi-people"></i>Data Pegawai (<span id="pegawaiCount">0</span>)</div><div style="display:flex;gap:10px"><button class="btn btn-ghost" onclick="exportPegawaiExcel()"><i class="bi bi-download"></i> Export</button><button class="btn btn-primary" onclick="refreshPegawai()"><i class="bi bi-arrow-clockwise"></i> Refresh</button></div></div>
+            <div class="table-container"><table class="data-table"><thead><tr><th style="width:50px">No</th><th onclick="sortPegawai('nama')" style="cursor:pointer">Nama <i class="bi bi-arrow-down-up"></i></th><th>NPP</th><th onclick="sortPegawai('jabatan')" style="cursor:pointer">Jabatan <i class="bi bi-arrow-down-up"></i></th><th onclick="sortPegawai('jabatan_tna')" style="cursor:pointer">Jabatan TNA <i class="bi bi-arrow-down-up"></i></th><th>Unit Kerja</th><th style="width:80px">Mutasi</th></tr></thead><tbody id="pegawaiTableBody"></tbody></table></div>
+            <div class="pagination-bar"><div class="pagination-info">Showing <span id="pegStart">0</span>-<span id="pegEnd">0</span> of <span id="pegTotal">0</span></div><div class="pagination-btns" id="pegawaiPagination"></div></div>
+            </div>
+        </div></div>
+        
         <div class="tab-content" id="tabData"><div class="page-content">
             <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
                 <div class="stat-card navy"><div class="stat-header"><div class="stat-icon"><i class="bi bi-journal-bookmark"></i></div></div><div class="stat-value" id="dataModul">0</div><div class="stat-label">Training Modules</div></div>
@@ -464,6 +478,69 @@
 </div>
 
 <div class="modal-overlay" id="modal"><div class="modal-content"><div class="modal-header"><h3><i class="bi bi-file-earmark-text"></i> Submission Detail</h3><button class="modal-close" onclick="closeModal()">&times;</button></div><div class="modal-body" id="modalBody"></div></div></div>
+
+<div class="modal-overlay" id="mutasiModal"><div class="modal-content" style="max-width:900px;max-height:90vh;overflow:auto"><div class="modal-header" style="background:linear-gradient(135deg,var(--primary),var(--primary-light));color:white;position:sticky;top:0;z-index:10"><h3><i class="bi bi-arrow-left-right"></i> Mutasi Pegawai</h3><button class="modal-close" onclick="closeMutasiModal()" style="color:white">&times;</button></div><div class="modal-body" id="mutasiBody" style="padding:24px">
+<form id="mutasiForm">
+<input type="hidden" id="mutasiId">
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+<!-- KOLOM KIRI: Data Pegawai & Form -->
+<div>
+<!-- Info Pegawai -->
+<div style="background:linear-gradient(135deg,var(--primary),var(--primary-light));border-radius:12px;padding:20px;margin-bottom:20px;color:white">
+<h4 style="font-size:12px;opacity:0.8;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px"><i class="bi bi-person-badge"></i> Data Pegawai</h4>
+<div style="font-size:18px;font-weight:700" id="mutasiNama">-</div>
+<div style="font-size:14px;opacity:0.8">NPP: <span id="mutasiNpp">-</span></div>
+</div>
+
+<!-- Form Mutasi -->
+<div style="background:var(--bg-main);border-radius:12px;padding:20px">
+<h4 style="font-size:12px;color:var(--text-muted);margin-bottom:16px;text-transform:uppercase;letter-spacing:1px"><i class="bi bi-pencil-square"></i> Form Mutasi</h4>
+
+<div class="form-group" style="margin-bottom:16px">
+<label class="form-label">Jabatan <small style="color:var(--text-muted)">(dari SK/surat mutasi)</small></label>
+<input type="text" class="form-input" id="mutasiJabatanBaru" placeholder="Ketik jabatan sesuai SK...">
+</div>
+
+<div class="form-group" style="margin-bottom:16px">
+<label class="form-label">Jabatan TNA <span style="color:#ef4444">*</span> <small style="color:var(--text-muted)">(untuk mapping modul)</small></label>
+<input type="text" class="form-input" id="searchJabatanTna" placeholder="🔍 Ketik untuk mencari jabatan TNA..." style="margin-bottom:8px" oninput="filterJabatanDropdown()">
+<select class="form-input" id="mutasiJabatanTnaBaru" style="cursor:pointer" size="6" required onchange="showModulPreview()">
+<option value="">-- Pilih Jabatan TNA --</option>
+</select>
+</div>
+
+<div class="form-group" style="margin-bottom:16px">
+<label class="form-label">Unit Kerja</label>
+<input type="text" class="form-input" id="mutasiUnitBaru" placeholder="Ketik unit kerja baru...">
+</div>
+
+<div class="form-group" style="margin-bottom:16px">
+<label class="form-label">Grup / Cabang</label>
+<input type="text" class="form-input" id="mutasiGrupBaru" placeholder="Ketik grup/cabang baru...">
+</div>
+</div>
+</div>
+
+<!-- KOLOM KANAN: Preview Modul -->
+<div>
+<div style="background:white;border:2px solid var(--border);border-radius:12px;padding:20px;height:100%">
+<h4 style="font-size:12px;color:var(--text-muted);margin-bottom:16px;text-transform:uppercase;letter-spacing:1px"><i class="bi bi-journal-bookmark"></i> Preview Modul TNA</h4>
+<div id="modulPreview" style="font-size:14px;color:var(--text-muted);text-align:center;padding:40px 0">
+<i class="bi bi-arrow-left" style="font-size:24px;display:block;margin-bottom:8px"></i>
+Pilih Jabatan TNA untuk melihat modul
+</div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;gap:12px;justify-content:flex-end;margin-top:24px;padding-top:20px;border-top:1px solid var(--border)">
+<button type="button" class="btn btn-ghost" onclick="closeMutasiModal()"><i class="bi bi-x-lg"></i> Batal</button>
+<button type="submit" class="btn btn-primary" style="background:linear-gradient(135deg,#22c55e,#16a34a)"><i class="bi bi-check-lg"></i> Simpan Mutasi</button>
+</div>
+</form>
+</div></div></div>
+
 <div class="toast-container" id="toasts"></div>
 
 <script>
@@ -509,7 +586,332 @@ async function exportExcel(){const{data:s}=await db.from('submissions').select('
 async function refreshData(){await loadDashboard();toast('Refreshed!','success')}
 function timeAgo(d){const s=Math.floor((new Date()-new Date(d))/1000);if(s<60)return'Just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago'}
 function toast(m,t='success'){const x=document.createElement('div');x.className=`toast ${t}`;x.innerHTML=`<i class="bi bi-${t==='success'?'check-circle':'x-circle'}"></i><span>${m}</span>`;document.getElementById('toasts').appendChild(x);setTimeout(()=>x.remove(),3000)}
-console.log('🚀 TNA Admin v7 Premium');
+
+// ==================== PEGAWAI MANAGEMENT ====================
+let allPegawai=[], filteredPegawai=[], jabatanList=[], jabatanModulData={}, pegPage=1, pegPerPage=20, pegSortField='nama', pegSortDir='asc';
+
+async function loadPegawai(){
+    toast('Memuat data pegawai...','success');
+    
+    // Load pegawai
+    const{data:p}=await db.from('pegawai').select('*').order('nama');
+    allPegawai=p||[];
+    filteredPegawai=[...allPegawai];
+    
+    // Load jabatan with modul data
+    const{data:j}=await db.from('jabatan').select('*').order('nama');
+    jabatanList=(j||[]).map(x=>x.nama);
+    
+    // Build jabatan -> modul mapping
+    jabatanModulData={};
+    (j||[]).forEach(jab=>{
+        jabatanModulData[jab.nama]={
+            kode: jab.kode,
+            posisi: jab.posisi,
+            lokasi: jab.lokasi,
+            modul_soft: jab.modul_soft||[],
+            modul_tech: jab.modul_tech||[]
+        };
+    });
+    
+    // Populate unit filter
+    const units=[...new Set(allPegawai.map(x=>x.unit_kerja||x.grup_cabang).filter(Boolean))].sort();
+    const filterUnit=document.getElementById('filterUnit');
+    if(filterUnit){
+        filterUnit.innerHTML='<option value="">Semua Unit</option>'+units.map(u=>`<option value="${u}">${u}</option>`).join('');
+    }
+    
+    document.getElementById('pegawaiCount').textContent=allPegawai.length;
+    renderPegawaiTable();
+    toast('Data berhasil dimuat!','success');
+}
+
+function filterPegawai(){
+    const search=document.getElementById('searchPegawai')?.value.toLowerCase()||'';
+    const unit=document.getElementById('filterUnit')?.value||'';
+    const mapping=document.getElementById('filterMapping')?.value||'';
+    
+    filteredPegawai=allPegawai.filter(p=>{
+        const matchSearch=!search||p.nama?.toLowerCase().includes(search)||p.npp?.toLowerCase().includes(search)||p.jabatan?.toLowerCase().includes(search)||p.jabatan_tna?.toLowerCase().includes(search);
+        const matchUnit=!unit||(p.unit_kerja===unit||p.grup_cabang===unit);
+        const hasMapping=jabatanList.includes(p.jabatan_tna);
+        const matchMapping=!mapping||(mapping==='mapped'&&hasMapping)||(mapping==='unmapped'&&!hasMapping);
+        return matchSearch&&matchUnit&&matchMapping;
+    });
+    pegPage=1;
+    renderPegawaiTable();
+}
+
+function clearPegawaiFilters(){
+    document.getElementById('searchPegawai').value='';
+    document.getElementById('filterUnit').value='';
+    document.getElementById('filterMapping').value='';
+    filteredPegawai=[...allPegawai];
+    pegPage=1;
+    renderPegawaiTable();
+}
+
+function sortPegawai(field){
+    if(pegSortField===field)pegSortDir=pegSortDir==='asc'?'desc':'asc';
+    else{pegSortField=field;pegSortDir='asc';}
+    filteredPegawai.sort((a,b)=>{
+        const va=(a[field]||'').toLowerCase();
+        const vb=(b[field]||'').toLowerCase();
+        return pegSortDir==='asc'?(va>vb?1:-1):(va<vb?1:-1);
+    });
+    renderPegawaiTable();
+}
+
+function renderPegawaiTable(){
+    const tb=document.getElementById('pegawaiTableBody');
+    if(!tb)return;
+    const st=(pegPage-1)*pegPerPage;
+    const en=Math.min(st+pegPerPage,filteredPegawai.length);
+    const pd=filteredPegawai.slice(st,en);
+    
+    if(!pd.length){
+        tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:60px;color:var(--text-muted)">Tidak ada data</td></tr>';
+        return;
+    }
+    
+    tb.innerHTML=pd.map((p,i)=>{
+        const hasMapping=jabatanList.includes(p.jabatan_tna);
+        const mappingBadge=hasMapping?'<span style="color:#22c55e;font-size:10px">✓</span>':'<span style="color:#ef4444;font-size:10px">✗</span>';
+        return `<tr>
+            <td style="color:var(--text-muted)">${st+i+1}</td>
+            <td><strong>${p.nama}</strong></td>
+            <td style="color:var(--text-muted)">${p.npp||'-'}</td>
+            <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.jabatan||''}">${p.jabatan||'-'}</td>
+            <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.jabatan_tna||''}">${p.jabatan_tna||'-'} ${mappingBadge}</td>
+            <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.unit_kerja||p.grup_cabang||''}">${p.unit_kerja||p.grup_cabang||'-'}</td>
+            <td><button class="action-btn view" onclick="openMutasi(${p.id})" title="Mutasi" style="background:rgba(34,197,94,0.1);color:#16a34a"><i class="bi bi-arrow-left-right"></i></button></td>
+        </tr>`;
+    }).join('');
+    
+    document.getElementById('pegStart').textContent=st+1;
+    document.getElementById('pegEnd').textContent=en;
+    document.getElementById('pegTotal').textContent=filteredPegawai.length;
+    
+    // Pagination
+    const tp=Math.ceil(filteredPegawai.length/pegPerPage);
+    const pagination=document.getElementById('pegawaiPagination');
+    if(pagination){
+        let btns='';
+        const maxBtns=7;
+        let startP=Math.max(1,pegPage-Math.floor(maxBtns/2));
+        let endP=Math.min(tp,startP+maxBtns-1);
+        if(endP-startP<maxBtns-1)startP=Math.max(1,endP-maxBtns+1);
+        
+        if(startP>1)btns+=`<button class="page-btn" onclick="goPegPage(1)">1</button>`;
+        if(startP>2)btns+=`<span style="padding:0 8px">...</span>`;
+        for(let i=startP;i<=endP;i++){
+            btns+=`<button class="page-btn ${i===pegPage?'active':''}" onclick="goPegPage(${i})">${i}</button>`;
+        }
+        if(endP<tp-1)btns+=`<span style="padding:0 8px">...</span>`;
+        if(endP<tp)btns+=`<button class="page-btn" onclick="goPegPage(${tp})">${tp}</button>`;
+        pagination.innerHTML=btns;
+    }
+}
+
+function goPegPage(p){pegPage=p;renderPegawaiTable();}
+
+async function openMutasi(id){
+    const p=allPegawai.find(x=>x.id===id);
+    if(!p)return;
+    
+    document.getElementById('mutasiId').value=id;
+    document.getElementById('mutasiNama').textContent=p.nama||'-';
+    document.getElementById('mutasiNpp').textContent=p.npp||'-';
+    
+    // Pre-fill data dengan data saat ini
+    document.getElementById('mutasiJabatanBaru').value=p.jabatan||'';
+    document.getElementById('mutasiUnitBaru').value=p.unit_kerja||'';
+    document.getElementById('mutasiGrupBaru').value=p.grup_cabang||'';
+    
+    // Populate jabatan dropdown
+    const dropdown=document.getElementById('mutasiJabatanTnaBaru');
+    dropdown.innerHTML='<option value="">-- Pilih Jabatan TNA --</option>'+jabatanList.map(j=>`<option value="${j}" ${j===p.jabatan_tna?'selected':''}>${j}</option>`).join('');
+    document.getElementById('searchJabatanTna').value='';
+    
+    // Show current modul preview
+    if(p.jabatan_tna && jabatanModulData[p.jabatan_tna]){
+        showModulPreview();
+    } else {
+        document.getElementById('modulPreview').innerHTML=`
+            <div style="text-align:center;padding:40px 0;color:var(--text-muted)">
+                <i class="bi bi-arrow-left" style="font-size:24px;display:block;margin-bottom:8px"></i>
+                Pilih Jabatan TNA untuk melihat modul
+            </div>`;
+    }
+    
+    document.getElementById('mutasiModal').classList.add('show');
+}
+
+function showModulPreview(){
+    const jabatanTna=document.getElementById('mutasiJabatanTnaBaru').value;
+    const preview=document.getElementById('modulPreview');
+    
+    if(!jabatanTna){
+        preview.innerHTML=`
+            <div style="text-align:center;padding:40px 0;color:var(--text-muted)">
+                <i class="bi bi-arrow-left" style="font-size:24px;display:block;margin-bottom:8px"></i>
+                Pilih Jabatan TNA untuk melihat modul
+            </div>`;
+        return;
+    }
+    
+    const data=jabatanModulData[jabatanTna];
+    if(!data){
+        preview.innerHTML=`
+            <div style="text-align:center;padding:40px 0;color:#ef4444">
+                <i class="bi bi-exclamation-circle" style="font-size:24px;display:block;margin-bottom:8px"></i>
+                Jabatan tidak ditemukan di database
+            </div>`;
+        return;
+    }
+    
+    const softModuls=data.modul_soft||[];
+    const techModuls=data.modul_tech||[];
+    const totalModuls=softModuls.length+techModuls.length;
+    
+    let html=`
+        <div style="background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:var(--primary-dark);padding:12px 16px;border-radius:8px;margin-bottom:16px">
+            <div style="font-weight:700;font-size:14px">${jabatanTna}</div>
+            <div style="font-size:12px;opacity:0.8">Total ${totalModuls} modul pelatihan</div>
+        </div>`;
+    
+    if(softModuls.length>0){
+        html+=`<div style="margin-bottom:16px">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase">
+                <i class="bi bi-people"></i> Soft Skills (${softModuls.length})
+            </div>
+            <div style="max-height:150px;overflow-y:auto">`;
+        softModuls.forEach(m=>{
+            const nama=typeof m==='object'?m.nama||m.kode:m;
+            const tingkat=typeof m==='object'?m.tingkat:'';
+            html+=`<div style="padding:6px 10px;background:var(--bg-main);border-radius:6px;margin-bottom:4px;font-size:12px;display:flex;justify-content:space-between;align-items:center">
+                <span>${nama}</span>
+                ${tingkat?`<span style="background:#3b82f6;color:white;padding:2px 6px;border-radius:4px;font-size:10px">${tingkat}</span>`:''}
+            </div>`;
+        });
+        html+=`</div></div>`;
+    }
+    
+    if(techModuls.length>0){
+        html+=`<div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase">
+                <i class="bi bi-gear"></i> Technical (${techModuls.length})
+            </div>
+            <div style="max-height:150px;overflow-y:auto">`;
+        techModuls.forEach(m=>{
+            const nama=typeof m==='object'?m.nama||m.kode:m;
+            const tingkat=typeof m==='object'?m.tingkat:'';
+            html+=`<div style="padding:6px 10px;background:var(--bg-main);border-radius:6px;margin-bottom:4px;font-size:12px;display:flex;justify-content:space-between;align-items:center">
+                <span>${nama}</span>
+                ${tingkat?`<span style="background:#22c55e;color:white;padding:2px 6px;border-radius:4px;font-size:10px">${tingkat}</span>`:''}
+            </div>`;
+        });
+        html+=`</div></div>`;
+    }
+    
+    if(totalModuls===0){
+        html+=`<div style="text-align:center;padding:20px;color:var(--text-muted)">
+            <i class="bi bi-inbox" style="font-size:20px;display:block;margin-bottom:8px"></i>
+            Tidak ada modul untuk jabatan ini
+        </div>`;
+    }
+    
+    preview.innerHTML=html;
+}
+
+function closeMutasiModal(){
+    document.getElementById('mutasiModal').classList.remove('show');
+    document.getElementById('searchJabatanTna').value='';
+}
+
+function filterJabatanDropdown(){
+    const search=document.getElementById('searchJabatanTna').value.toLowerCase();
+    const dropdown=document.getElementById('mutasiJabatanTnaBaru');
+    const currentVal=dropdown.value;
+    
+    const filtered=search?jabatanList.filter(j=>j.toLowerCase().includes(search)):jabatanList;
+    dropdown.innerHTML='<option value="">-- Pilih Jabatan TNA --</option>'+filtered.map(j=>`<option value="${j}" ${j===currentVal?'selected':''}>${j}</option>`).join('');
+    
+    // If current selection not in filtered list, show preview for first match
+    if(search && filtered.length>0 && !filtered.includes(currentVal)){
+        // Don't auto-select, just keep the list filtered
+    }
+}
+
+document.getElementById('mutasiForm')?.addEventListener('submit',async function(e){
+    e.preventDefault();
+    const id=parseInt(document.getElementById('mutasiId').value);
+    const jabatan=document.getElementById('mutasiJabatanBaru').value.trim();
+    const jabatan_tna=document.getElementById('mutasiJabatanTnaBaru').value;
+    const unit_kerja=document.getElementById('mutasiUnitBaru').value.trim();
+    const grup_cabang=document.getElementById('mutasiGrupBaru').value.trim();
+    
+    if(!jabatan_tna){
+        toast('Pilih Jabatan TNA!','error');
+        return;
+    }
+    
+    try{
+        const updateData={jabatan_tna, unit_kerja, grup_cabang};
+        if(jabatan)updateData.jabatan=jabatan;
+        
+        const{error}=await db.from('pegawai').update(updateData).eq('id',id);
+        if(error)throw error;
+        
+        // Update local data
+        const p=allPegawai.find(x=>x.id===id);
+        if(p){
+            if(jabatan)p.jabatan=jabatan;
+            p.jabatan_tna=jabatan_tna;
+            p.unit_kerja=unit_kerja;
+            p.grup_cabang=grup_cabang;
+        }
+        
+        toast('Mutasi berhasil disimpan!','success');
+        closeMutasiModal();
+        renderPegawaiTable();
+    }catch(err){
+        toast('Gagal mutasi: '+err.message,'error');
+    }
+});
+
+async function refreshPegawai(){
+    toast('Memuat data...','success');
+    await loadPegawai();
+    toast('Data pegawai direfresh!','success');
+}
+
+function exportPegawaiExcel(){
+    const data=filteredPegawai.map((p,i)=>({
+        No:i+1,
+        Nama:p.nama,
+        NPP:p.npp,
+        Jabatan:p.jabatan,
+        'Jabatan TNA':p.jabatan_tna,
+        'Unit Kerja':p.unit_kerja,
+        'Grup Cabang':p.grup_cabang,
+        'Status Mapping':jabatanList.includes(p.jabatan_tna)?'OK':'Belum Mapping'
+    }));
+    const ws=XLSX.utils.json_to_sheet(data);
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Pegawai');
+    XLSX.writeFile(wb,`Data_Pegawai_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast('Export berhasil!','success');
+}
+
+// Load pegawai when tab is shown
+const origShowTab=showTab;
+showTab=function(tab,el){
+    origShowTab(tab,el);
+    if(tab==='pegawai'&&allPegawai.length===0)loadPegawai();
+};
+
+console.log('🚀 TNA Admin v9 - Mutasi dengan Preview Modul');
 </script>
 </body>
 </html>
