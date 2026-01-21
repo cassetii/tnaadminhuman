@@ -593,10 +593,25 @@ let allPegawai=[], filteredPegawai=[], jabatanList=[], jabatanModulData={}, pegP
 async function loadPegawai(){
     toast('Memuat data pegawai...','success');
     
-    // Load pegawai
-    const{data:p}=await db.from('pegawai').select('*').order('nama');
-    allPegawai=p||[];
-    filteredPegawai=[...allPegawai];
+    // Load ALL pegawai (Supabase default limit is 1000, need to fetch in batches)
+    let allData = [];
+    let from = 0;
+    const batchSize = 1000;
+    
+    while(true) {
+        const {data, error} = await db.from('pegawai').select('*').order('nama').range(from, from + batchSize - 1);
+        if(error) {
+            toast('Error: ' + error.message, 'error');
+            break;
+        }
+        if(!data || data.length === 0) break;
+        allData = allData.concat(data);
+        if(data.length < batchSize) break; // Last batch
+        from += batchSize;
+    }
+    
+    allPegawai = allData;
+    filteredPegawai = [...allPegawai];
     
     // Load jabatan with modul data
     const{data:j}=await db.from('jabatan').select('*').order('nama');
@@ -623,7 +638,7 @@ async function loadPegawai(){
     
     document.getElementById('pegawaiCount').textContent=allPegawai.length;
     renderPegawaiTable();
-    toast('Data berhasil dimuat!','success');
+    toast(`Data berhasil dimuat! (${allPegawai.length} pegawai)`,'success');
 }
 
 function filterPegawai(){
@@ -911,7 +926,7 @@ showTab=function(tab,el){
     if(tab==='pegawai'&&allPegawai.length===0)loadPegawai();
 };
 
-console.log('🚀 TNA Admin v9 - Mutasi dengan Preview Modul');
+console.log('🚀 TNA Admin v8 - Pegawai Management');
 </script>
 </body>
 </html>
